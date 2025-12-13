@@ -116,6 +116,27 @@ function ScanUpload() {
     }
   };
 
+
+  const resizeImage = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1280; // Atur max width, cukup untuk ML prediction
+        const scale = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          const resizedFile = new File([blob], file.name, { type: 'image/jpeg' });
+          resolve(resizedFile);
+        }, 'image/jpeg', 0.85); // Quality 85%
+      };
+    });
+  };
+
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -127,6 +148,7 @@ function ScanUpload() {
         alert('Ukuran file terlalu besar. Maksimal 10MB');
         return;
       }
+
 
       setImageFile(file);
       const reader = new FileReader();
@@ -293,7 +315,9 @@ function ScanUpload() {
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const filename = `fish-snapshot-${Date.now()}.jpg`;
       const file = dataURLtoFile(imageDataUrl, filename);
-
+      const resizedFile = await resizeImage(file);
+      setImageFile(resizedFile);
+      setSelectedImage(URL.createObjectURL(resizedFile));
       setSelectedImage(imageDataUrl);
       setImageFile(file);
       stopCamera();
