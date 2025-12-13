@@ -645,7 +645,7 @@ function ScanUpload() {
             />
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <label htmlFor="file-upload" style={{
+              <label htmlFor="gallery-upload" style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
