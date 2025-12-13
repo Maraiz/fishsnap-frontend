@@ -15,7 +15,7 @@ function ScanUpload() {
   const [expandedItems, setExpandedItems] = useState({});
   const [recipes, setRecipes] = useState([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(false);
-
+  
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -54,14 +54,14 @@ function ScanUpload() {
   const getAuthHeaders = () => {
     const token = getAuthToken();
     const headers = {};
-
+    
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
       console.log('🔐 Adding Authorization header');
     } else {
       console.warn('⚠️ No token available for request');
     }
-
+    
     return headers;
   };
   // In-memory storage
@@ -93,7 +93,7 @@ function ScanUpload() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/recipes/fish/${encodeURIComponent(fishName)}`, {
         method: 'GET',
-        headers: getAuthHeaders(), // ✅ Add auth headers
+         headers: getAuthHeaders(), // ✅ Add auth headers
         credentials: 'include'
       });
 
@@ -119,15 +119,10 @@ function ScanUpload() {
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      const isImage =
-        file.type.startsWith('image/') ||
-        file.name.match(/\.(jpg|jpeg|png|webp)$/i);
-
-      if (!isImage) {
+      if (!file.type.startsWith('image/')) {
         alert('Silakan pilih file gambar yang valid');
         return;
       }
-
       if (file.size > 10 * 1024 * 1024) {
         alert('Ukuran file terlalu besar. Maksimal 10MB');
         return;
@@ -162,7 +157,7 @@ function ScanUpload() {
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-
+    
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       const file = files[0];
@@ -209,7 +204,7 @@ function ScanUpload() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-
+        
         const playPromise = videoRef.current.play();
         if (playPromise !== undefined) {
           await playPromise;
@@ -244,15 +239,15 @@ function ScanUpload() {
 
     } catch (error) {
       setVideoStatus('error');
-
+      
       if (error.name === 'OverconstrainedError') {
         try {
           const fallbackConstraints = { video: true };
           const fallbackStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-
+          
           setStream(fallbackStream);
           setIsCamera(true);
-
+          
           if (videoRef.current) {
             videoRef.current.srcObject = fallbackStream;
             const playPromise = videoRef.current.play();
@@ -277,7 +272,7 @@ function ScanUpload() {
 
     try {
       await new Promise(resolve => requestAnimationFrame(resolve));
-
+      
       const canvas = canvasRef.current;
       if (!canvas) throw new Error('Canvas not available');
 
@@ -286,7 +281,7 @@ function ScanUpload() {
 
       const width = video.videoWidth || 640;
       const height = video.videoHeight || 480;
-
+      
       if (width === 0 || height === 0) {
         throw new Error('Video dimensions not available yet');
       }
@@ -294,17 +289,17 @@ function ScanUpload() {
       canvas.width = width;
       canvas.height = height;
       context.drawImage(video, 0, 0, width, height);
-
+      
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const filename = `fish-snapshot-${Date.now()}.jpg`;
       const file = dataURLtoFile(imageDataUrl, filename);
-
+      
       setSelectedImage(imageDataUrl);
       setImageFile(file);
       stopCamera();
       setError(null);
       analyzeImage(file);
-
+      
     } catch (error) {
       setError('Gagal mengambil foto: ' + error.message);
     }
@@ -327,7 +322,7 @@ function ScanUpload() {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
-
+    
     if (videoRef.current) {
       if (videoRef.current._cameraCleanup) {
         videoRef.current._cameraCleanup();
@@ -335,12 +330,12 @@ function ScanUpload() {
       if (videoRef.current._fallbackTimeout) {
         clearTimeout(videoRef.current._fallbackTimeout);
       }
-
+      
       videoRef.current.srcObject = null;
       videoRef.current.pause();
       videoRef.current.load();
     }
-
+    
     setIsCamera(false);
     setVideoStatus('stopped');
   }, [stream]);
@@ -355,7 +350,7 @@ function ScanUpload() {
     setIsAnalyzing(true);
     setError(null);
     setAnalysisResult(null);
-
+    
     try {
       const formData = new FormData();
       formData.append('image', file);
@@ -373,7 +368,7 @@ function ScanUpload() {
       }
 
       const result = await response.json();
-
+      
       if (result.status === 'success') {
         const formattedResult = {
           name: result.info.nama_indonesia || result.predicted_class,
@@ -382,7 +377,7 @@ function ScanUpload() {
           habitat: result.info.habitat || 'Tidak diketahui',
           konsumsi: result.info.konsumsi || 'Tidak diketahui'
         };
-
+        
         setAnalysisResult(formattedResult);
       } else {
         throw new Error(result.message || 'Gagal menganalisis gambar');
@@ -412,7 +407,7 @@ function ScanUpload() {
 
     try {
       const formData = new FormData();
-
+      
       if (imageFile) {
         formData.append('image', imageFile);
       }
@@ -465,7 +460,7 @@ function ScanUpload() {
           font-weight: 500;
         `;
         document.body.appendChild(successMessage);
-
+        
         setTimeout(() => {
           successMessage.remove();
         }, 3000);
@@ -477,7 +472,7 @@ function ScanUpload() {
       console.error('❌ Error saving to database:', error);
       setError('Gagal menyimpan data: ' + error.message);
       alert(`Gagal menyimpan data: ${error.message}`);
-
+      
       if (error.message.includes('401') || error.message.includes('login')) {
         alert('Sesi Anda telah berakhir. Silakan login kembali.');
       }
@@ -579,7 +574,7 @@ function ScanUpload() {
           letterSpacing: '-0.025em'
         }}>Fishmap Ai</h1>
       </div>
-
+      
       {error && (
         <div style={{
           display: 'flex',
@@ -597,9 +592,9 @@ function ScanUpload() {
           <span>{error}</span>
         </div>
       )}
-
+      
       {!selectedImage && !isCamera && (
-        <div
+        <div 
           style={{
             background: '#ffffff',
             border: '2px dashed #d1d5db',
@@ -626,26 +621,17 @@ function ScanUpload() {
             <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '2rem' }}>
               Mendukung: JPG, PNG, WEBP (Max 10MB)
             </p>
-
-            <input
-              type="file"
-              id="gallery-upload"
-              accept="image/png, image/jpeg, image/webp"
+            
+            <input 
+              type="file" 
+              id="file-upload" 
+              accept="image/*" 
               style={{ display: 'none' }}
               onChange={handleFileUpload}
             />
-
-            <input
-              type="file"
-              id="camera-upload"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={handleFileUpload}
-            />
-
+            
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <label htmlFor="gallery-upload" style={{
+              <label htmlFor="file-upload" style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -663,25 +649,21 @@ function ScanUpload() {
                 <i className="fas fa-folder-open"></i>
                 Pilih File
               </label>
-
-              <button
-                onClick={() => document.getElementById('camera-upload').click()}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  color: 'white',
-                  minWidth: '140px'
-                }}
-              >
+              <button onClick={startCamera} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.5rem',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white',
+                minWidth: '140px'
+              }}>
                 <i className="fas fa-camera"></i>
                 Buka Kamera
               </button>
@@ -699,16 +681,16 @@ function ScanUpload() {
           margin: '2rem 0'
         }}>
           <div style={{ position: 'relative', background: '#111827' }}>
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              muted 
+              playsInline 
               style={{ width: '100%', height: 'auto', display: 'block', minHeight: '300px', objectFit: 'cover' }}
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
           </div>
-
+          
           <div style={{ padding: '1rem', background: 'rgba(0, 0, 0, 0.8)', textAlign: 'center' }}>
             <div style={{
               display: 'inline-flex',
@@ -726,10 +708,10 @@ function ScanUpload() {
               <span>{getVideoStatusDisplay()}</span>
             </div>
           </div>
-
+          
           <div style={{ padding: '1.5rem', background: '#f9fafb', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={capturePhoto}
+            <button 
+              onClick={capturePhoto} 
               disabled={videoStatus !== 'ready' || videoRef.current?.readyState < 2}
               style={{
                 display: 'inline-flex',
@@ -882,11 +864,11 @@ function ScanUpload() {
               }}>
                 <i className="fas fa-times"></i>
               </button>
-
+              
               <div style={{ position: 'relative', width: '100%', height: '250px', overflow: 'hidden' }}>
                 <img src={selectedImage} alt={analysisResult.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-
+              
               <div style={{ padding: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1f2937', margin: 0, lineHeight: 1.2 }}>
@@ -908,7 +890,7 @@ function ScanUpload() {
                     {analysisResult.confidence} akurat
                   </div>
                 </div>
-
+                
                 <div style={{ display: 'grid', gap: '1rem' }}>
                   <div style={{
                     display: 'flex',
@@ -925,7 +907,7 @@ function ScanUpload() {
                     </div>
                     <div style={{ fontWeight: '600', color: '#1f2937' }}>{analysisResult.habitat}</div>
                   </div>
-
+                  
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -939,14 +921,14 @@ function ScanUpload() {
                       <i className="fas fa-utensils" style={{ color: '#2563eb', width: '16px' }}></i>
                       Status Konsumsi
                     </div>
-                    <div style={{
-                      fontWeight: '600',
+                    <div style={{ 
+                      fontWeight: '600', 
                       color: analysisResult.konsumsi === 'Dapat dikonsumsi' ? '#10b981' : '#f59e0b'
                     }}>
                       {analysisResult.konsumsi}
                     </div>
                   </div>
-
+                  
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -960,7 +942,7 @@ function ScanUpload() {
                       <i className="fas fa-sticky-note" style={{ color: '#2563eb', width: '16px' }}></i>
                       Note
                     </div>
-                    <button
+                    <button 
                       onClick={toggleDetail}
                       style={{
                         background: 'none',
@@ -978,10 +960,10 @@ function ScanUpload() {
                   </div>
                 </div>
               </div>
-
+              
               <div style={{ padding: '1.5rem 2rem', background: '#f9fafb', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
-                <button
-                  onClick={saveToDatabase}
+                <button 
+                  onClick={saveToDatabase} 
                   disabled={isSaving}
                   style={{
                     display: 'inline-flex',
@@ -1040,7 +1022,7 @@ function ScanUpload() {
       )}
 
       {showDetail && (
-        <div
+        <div 
           onClick={toggleDetail}
           style={{
             position: 'fixed',
@@ -1057,7 +1039,7 @@ function ScanUpload() {
             padding: '1rem'
           }}
         >
-          <div
+          <div 
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'rgba(255, 255, 255, 0.95)',
@@ -1115,7 +1097,7 @@ function ScanUpload() {
                 <i className="fas fa-times" style={{ position: 'relative', zIndex: 1 }}></i>
               </button>
             </div>
-
+            
             <div style={{
               display: 'flex',
               padding: '0.5rem',
@@ -1125,7 +1107,7 @@ function ScanUpload() {
               borderRadius: '16px',
               position: 'relative'
             }}>
-              <button
+              <button 
                 onClick={() => setActiveTab('makanan')}
                 style={{
                   flex: 1,
@@ -1145,7 +1127,7 @@ function ScanUpload() {
               >
                 Makanan
               </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('budidaya')}
                 style={{
                   flex: 1,
@@ -1166,7 +1148,7 @@ function ScanUpload() {
                 Budidaya
               </button>
             </div>
-
+            
             <div style={{
               padding: '1.5rem 2.5rem 2.5rem',
               maxHeight: '50vh',
@@ -1194,9 +1176,9 @@ function ScanUpload() {
                       </p>
                       <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0', display: 'grid', gap: '1rem' }}>
                         {recipes.map((recipe, index) => (
-                          <li
+                          <li 
                             key={recipe.id}
-                            onClick={() => toggleExpand(index)}
+                            onClick={() => toggleExpand(index)} 
                             style={{
                               padding: '1.25rem',
                               paddingLeft: '3rem',
@@ -1228,9 +1210,9 @@ function ScanUpload() {
                                 borderTop: '2px solid rgba(37, 99, 235, 0.1)'
                               }}>
                                 {recipe.image_url && (
-                                  <img
-                                    src={recipe.image_url}
-                                    alt={recipe.title}
+                                  <img 
+                                    src={recipe.image_url} 
+                                    alt={recipe.title} 
                                     style={{
                                       width: '100%',
                                       borderRadius: '12px',
@@ -1299,7 +1281,7 @@ function ScanUpload() {
                   )}
                 </div>
               )}
-
+              
               {activeTab === 'budidaya' && (
                 <div style={{ color: '#374151', lineHeight: 1.8 }}>
                   <p style={{ margin: '0 0 1.5rem 0', fontSize: '1rem', fontWeight: '500', color: '#4b5563' }}>
@@ -1307,9 +1289,9 @@ function ScanUpload() {
                   </p>
                   <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0', display: 'grid', gap: '1rem' }}>
                     {budidayaItems.map((item, index) => (
-                      <li
+                      <li 
                         key={index}
-                        onClick={() => toggleExpand(index)}
+                        onClick={() => toggleExpand(index)} 
                         style={{
                           padding: '1.25rem',
                           paddingLeft: '3rem',
@@ -1340,9 +1322,9 @@ function ScanUpload() {
                             paddingTop: '1rem',
                             borderTop: '2px solid rgba(37, 99, 235, 0.1)'
                           }}>
-                            <img
-                              src={item.image}
-                              alt={item.name}
+                            <img 
+                              src={item.image} 
+                              alt={item.name} 
                               style={{
                                 width: '100%',
                                 borderRadius: '12px',
