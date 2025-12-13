@@ -629,13 +629,20 @@ function ScanUpload() {
 
             <input
               type="file"
-              id="file-upload"
+              id="gallery-upload"
+              accept="image/png, image/jpeg, image/webp"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
+
+            <input
+              type="file"
+              id="camera-upload"
               accept="image/*"
               capture="environment"
               style={{ display: 'none' }}
               onChange={handleFileUpload}
             />
-
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <label htmlFor="file-upload" style={{
@@ -656,21 +663,25 @@ function ScanUpload() {
                 <i className="fas fa-folder-open"></i>
                 Pilih File
               </label>
-              <button onClick={startCamera} style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.5rem',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                color: 'white',
-                minWidth: '140px'
-              }}>
+
+              <button
+                onClick={() => document.getElementById('camera-upload').click()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white',
+                  minWidth: '140px'
+                }}
+              >
                 <i className="fas fa-camera"></i>
                 Buka Kamera
               </button>
