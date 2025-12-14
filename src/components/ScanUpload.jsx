@@ -15,28 +15,31 @@ function ScanUpload() {
   const [expandedItems, setExpandedItems] = useState({});
   const [recipes, setRecipes] = useState([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(false);
-
+  
+  // Chatbot states
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
+  const chatContainerRef = useRef(null);
+  
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
   const API_BASE_URL = 'https://api-fitcalori.my.id';
 
   const getAuthToken = () => {
-    // Try localStorage first
     let token = localStorage.getItem('accessToken');
     if (token) {
       console.log('✅ Token found in localStorage');
       return token;
     }
 
-    // Try sessionStorage
     token = sessionStorage.getItem('accessToken');
     if (token) {
       console.log('✅ Token found in sessionStorage');
       return token;
     }
 
-    // Try cookie
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
@@ -50,21 +53,20 @@ function ScanUpload() {
     return null;
   };
 
-  // 🔐 Helper function to create headers with auth
   const getAuthHeaders = () => {
     const token = getAuthToken();
     const headers = {};
-
+    
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
       console.log('🔐 Adding Authorization header');
     } else {
       console.warn('⚠️ No token available for request');
     }
-
+    
     return headers;
   };
-  // In-memory storage
+
   const [savedData, setSavedData] = useState({});
 
   useEffect(() => {
@@ -82,18 +84,31 @@ function ScanUpload() {
         analysisResult: analysisResult,
         selectedImage: selectedImage
       });
-      // Fetch recipes when analysis result is available
       fetchRecipes(analysisResult.name || analysisResult.predicted_class);
+      
+      // Initialize chat with greeting when fish is identified
+      setChatMessages([
+        {
+          role: 'assistant',
+          content: `Halo! Saya siap membantu Anda dengan budidaya ikan ${analysisResult.name}. Anda bisa menanyakan tentang cara merawat, pakan yang cocok, atau masalah lainnya. Silakan tanyakan apapun! 🐟`
+        }
+      ]);
     }
   }, [analysisResult, selectedImage]);
 
-  // Fetch recipes based on fish name
+  // Auto scroll chat to bottom
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
   const fetchRecipes = async (fishName) => {
     setIsLoadingRecipes(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/recipes/fish/${encodeURIComponent(fishName)}`, {
         method: 'GET',
-        headers: getAuthHeaders(), // ✅ Add auth headers
+        headers: getAuthHeaders(),
         credentials: 'include'
       });
 
@@ -102,7 +117,6 @@ function ScanUpload() {
         if (result.data && result.data.length > 0) {
           setRecipes(result.data);
         } else {
-          // Use default recipes if none found
           setRecipes([]);
         }
       } else {
@@ -116,25 +130,53 @@ function ScanUpload() {
     }
   };
 
+  // Send chat message to backend
+  const sendChatMessage = async () => {
+    if (!chatInput.trim()) return;
 
-  const resizeImage = (file) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1280; // Atur max width, cukup untuk ML prediction
-        const scale = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          const resizedFile = new File([blob], file.name, { type: 'image/jpeg' });
-          resolve(resizedFile);
-        }, 'image/jpeg', 0.85); // Quality 85%
-      };
-    });
+    const token = getAuthToken();
+    if (!token) {
+      alert('Anda harus login untuk menggunakan chatbot');
+      return;
+    }
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    
+    // Add user message to chat
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsSendingChat(true);
+
+    try {
+      // Create context-aware message with fish name
+      const contextMessage = `Saya sedang budidaya ikan ${analysisResult?.name || 'tidak diketahui'}. ${userMessage}`;
+      
+      const response = await fetch(`${API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: contextMessage })
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal mendapatkan response dari chatbot');
+      }
+
+      const data = await response.json();
+      
+      // Add bot response to chat
+      setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Maaf, terjadi kesalahan. Silakan coba lagi.' 
+      }]);
+    } finally {
+      setIsSendingChat(false);
+    }
   };
 
   const handleFileUpload = (event) => {
@@ -148,7 +190,6 @@ function ScanUpload() {
         alert('Ukuran file terlalu besar. Maksimal 10MB');
         return;
       }
-
 
       setImageFile(file);
       const reader = new FileReader();
@@ -179,7 +220,7 @@ function ScanUpload() {
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-
+    
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       const file = files[0];
@@ -226,7 +267,7 @@ function ScanUpload() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-
+        
         const playPromise = videoRef.current.play();
         if (playPromise !== undefined) {
           await playPromise;
@@ -261,15 +302,15 @@ function ScanUpload() {
 
     } catch (error) {
       setVideoStatus('error');
-
+      
       if (error.name === 'OverconstrainedError') {
         try {
           const fallbackConstraints = { video: true };
           const fallbackStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-
+          
           setStream(fallbackStream);
           setIsCamera(true);
-
+          
           if (videoRef.current) {
             videoRef.current.srcObject = fallbackStream;
             const playPromise = videoRef.current.play();
@@ -294,7 +335,7 @@ function ScanUpload() {
 
     try {
       await new Promise(resolve => requestAnimationFrame(resolve));
-
+      
       const canvas = canvasRef.current;
       if (!canvas) throw new Error('Canvas not available');
 
@@ -303,7 +344,7 @@ function ScanUpload() {
 
       const width = video.videoWidth || 640;
       const height = video.videoHeight || 480;
-
+      
       if (width === 0 || height === 0) {
         throw new Error('Video dimensions not available yet');
       }
@@ -311,19 +352,17 @@ function ScanUpload() {
       canvas.width = width;
       canvas.height = height;
       context.drawImage(video, 0, 0, width, height);
-
+      
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const filename = `fish-snapshot-${Date.now()}.jpg`;
       const file = dataURLtoFile(imageDataUrl, filename);
-      const resizedFile = await resizeImage(file);
-      setImageFile(resizedFile);
-      setSelectedImage(URL.createObjectURL(resizedFile));
+      
       setSelectedImage(imageDataUrl);
       setImageFile(file);
       stopCamera();
       setError(null);
       analyzeImage(file);
-
+      
     } catch (error) {
       setError('Gagal mengambil foto: ' + error.message);
     }
@@ -346,7 +385,7 @@ function ScanUpload() {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
-
+    
     if (videoRef.current) {
       if (videoRef.current._cameraCleanup) {
         videoRef.current._cameraCleanup();
@@ -354,12 +393,12 @@ function ScanUpload() {
       if (videoRef.current._fallbackTimeout) {
         clearTimeout(videoRef.current._fallbackTimeout);
       }
-
+      
       videoRef.current.srcObject = null;
       videoRef.current.pause();
       videoRef.current.load();
     }
-
+    
     setIsCamera(false);
     setVideoStatus('stopped');
   }, [stream]);
@@ -374,21 +413,17 @@ function ScanUpload() {
     setIsAnalyzing(true);
     setError(null);
     setAnalysisResult(null);
-
+    
     try {
       const formData = new FormData();
       formData.append('image', file);
 
-      const token = getAuthToken();
-
       const response = await fetch(`${API_BASE_URL}/predict-image`, {
         method: 'POST',
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : {},
-        body: formData
+        mode: 'cors',
+        credentials: 'include',
+        body: formData,
       });
-
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -396,7 +431,7 @@ function ScanUpload() {
       }
 
       const result = await response.json();
-
+      
       if (result.status === 'success') {
         const formattedResult = {
           name: result.info.nama_indonesia || result.predicted_class,
@@ -405,7 +440,7 @@ function ScanUpload() {
           habitat: result.info.habitat || 'Tidak diketahui',
           konsumsi: result.info.konsumsi || 'Tidak diketahui'
         };
-
+        
         setAnalysisResult(formattedResult);
       } else {
         throw new Error(result.message || 'Gagal menganalisis gambar');
@@ -423,7 +458,6 @@ function ScanUpload() {
       return;
     }
 
-    // 🔐 Check if token exists
     const token = getAuthToken();
     if (!token) {
       alert('Anda harus login untuk menyimpan data. Silakan login terlebih dahulu.');
@@ -435,7 +469,7 @@ function ScanUpload() {
 
     try {
       const formData = new FormData();
-
+      
       if (imageFile) {
         formData.append('image', imageFile);
       }
@@ -449,13 +483,12 @@ function ScanUpload() {
 
       console.log('💾 Saving to database with authentication...');
 
-      // ✅ CRITICAL: Add Authorization header
-      const response = await fetch(`${API_BASE_URL}/api/save-to-dataikan`, {
+      const response = await fetch(`${API_BASE_URL}/api/data-ikan`, {
         method: 'POST',
         mode: 'cors',
         credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}` // ✅ Add token!
+          'Authorization': `Bearer ${token}`
         },
         body: formData
       });
@@ -488,7 +521,7 @@ function ScanUpload() {
           font-weight: 500;
         `;
         document.body.appendChild(successMessage);
-
+        
         setTimeout(() => {
           successMessage.remove();
         }, 3000);
@@ -500,7 +533,7 @@ function ScanUpload() {
       console.error('❌ Error saving to database:', error);
       setError('Gagal menyimpan data: ' + error.message);
       alert(`Gagal menyimpan data: ${error.message}`);
-
+      
       if (error.message.includes('401') || error.message.includes('login')) {
         alert('Sesi Anda telah berakhir. Silakan login kembali.');
       }
@@ -520,6 +553,8 @@ function ScanUpload() {
     setShowDetail(false);
     setExpandedItems({});
     setRecipes([]);
+    setChatMessages([]);
+    setChatInput('');
     stopCamera();
   };
 
@@ -550,34 +585,12 @@ function ScanUpload() {
     }));
   };
 
-  // Default budidaya items (always shown)
   const budidayaItems = [
-    {
-      name: 'Pastikan kualitas air tetap bersih dengan pH optimal',
-      resep: '1. Ukur pH air secara rutin (ideal 6.5-8.5). 2. Ganti air secara berkala. 3. Gunakan filter untuk menjaga kebersihan. 4. Hindari overfeeding untuk mencegah pencemaran.',
-      image: 'https://mmc.tirto.id/image/2022/06/14/istock-519915660_ratio-16x9.jpg'
-    },
-    {
-      name: 'Berikan pakan berkualitas sesuai jadwal',
-      resep: '1. Beri pakan 2-3 kali sehari. 2. Gunakan pelet dengan protein 20-30%. 3. Sesuaikan jumlah pakan dengan bobot ikan (2-3% berat tubuh). 4. Pantau sisa pakan untuk hindari polusi.',
-      image: 'https://kuripan.lombokbaratkab.go.id/media/crop/2022/09/08/32-20220908-150322-785183.jpeg'
-    },
-    {
-      name: 'Monitor kesehatan ikan secara rutin',
-      resep: '1. Periksa tanda penyakit seperti lesu atau bintik putih. 2. Karantina ikan sakit. 3. Gunakan obat jika diperlukan. 4. Jaga kepadatan ikan di kolam.',
-      image: 'https://gdm.id/wp-content/uploads/2022/03/ternak-ikan-mujair.jpg'
-    },
-    {
-      name: 'Jaga suhu air sesuai kebutuhan spesies',
-      resep: '1. Ideal suhu 25-30°C. 2. Gunakan pemanas jika diperlukan. 3. Hindari perubahan suhu mendadak. 4. Monitor suhu harian.',
-      image: 'https://i1.wp.com/risetcdn.jatimtimes.com/images/2024/04/19/Ikan-Mujair-di-kolam-air-tawar.-Foto-Xjellypastaa-P6f3c3d128f525baf.jpg?quality=50&resize=1200,675'
-    }
+
   ];
 
-  // Format recipe instructions to array
   const formatInstructions = (instructions) => {
     if (!instructions) return [];
-    // Split by numbers followed by dot (1. 2. 3. etc)
     const steps = instructions.split(/\d+\.\s+/).filter(step => step.trim());
     return steps;
   };
@@ -602,7 +615,7 @@ function ScanUpload() {
           letterSpacing: '-0.025em'
         }}>Fishmap Ai</h1>
       </div>
-
+      
       {error && (
         <div style={{
           display: 'flex',
@@ -620,9 +633,9 @@ function ScanUpload() {
           <span>{error}</span>
         </div>
       )}
-
+      
       {!selectedImage && !isCamera && (
-        <div
+        <div 
           style={{
             background: '#ffffff',
             border: '2px dashed #d1d5db',
@@ -649,15 +662,15 @@ function ScanUpload() {
             <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '2rem' }}>
               Mendukung: JPG, PNG, WEBP (Max 10MB)
             </p>
-
-            <input
-              type="file"
-              id="file-upload"
-              accept="image/*"
+            
+            <input 
+              type="file" 
+              id="file-upload" 
+              accept="image/*" 
               style={{ display: 'none' }}
               onChange={handleFileUpload}
             />
-
+            
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <label htmlFor="file-upload" style={{
                 display: 'inline-flex',
@@ -709,16 +722,16 @@ function ScanUpload() {
           margin: '2rem 0'
         }}>
           <div style={{ position: 'relative', background: '#111827' }}>
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              muted 
+              playsInline 
               style={{ width: '100%', height: 'auto', display: 'block', minHeight: '300px', objectFit: 'cover' }}
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
           </div>
-
+          
           <div style={{ padding: '1rem', background: 'rgba(0, 0, 0, 0.8)', textAlign: 'center' }}>
             <div style={{
               display: 'inline-flex',
@@ -736,10 +749,10 @@ function ScanUpload() {
               <span>{getVideoStatusDisplay()}</span>
             </div>
           </div>
-
+          
           <div style={{ padding: '1.5rem', background: '#f9fafb', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={capturePhoto}
+            <button 
+              onClick={capturePhoto} 
               disabled={videoStatus !== 'ready' || videoRef.current?.readyState < 2}
               style={{
                 display: 'inline-flex',
@@ -892,11 +905,11 @@ function ScanUpload() {
               }}>
                 <i className="fas fa-times"></i>
               </button>
-
+              
               <div style={{ position: 'relative', width: '100%', height: '250px', overflow: 'hidden' }}>
                 <img src={selectedImage} alt={analysisResult.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-
+              
               <div style={{ padding: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1f2937', margin: 0, lineHeight: 1.2 }}>
@@ -918,7 +931,7 @@ function ScanUpload() {
                     {analysisResult.confidence} akurat
                   </div>
                 </div>
-
+                
                 <div style={{ display: 'grid', gap: '1rem' }}>
                   <div style={{
                     display: 'flex',
@@ -935,7 +948,7 @@ function ScanUpload() {
                     </div>
                     <div style={{ fontWeight: '600', color: '#1f2937' }}>{analysisResult.habitat}</div>
                   </div>
-
+                  
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -949,14 +962,14 @@ function ScanUpload() {
                       <i className="fas fa-utensils" style={{ color: '#2563eb', width: '16px' }}></i>
                       Status Konsumsi
                     </div>
-                    <div style={{
-                      fontWeight: '600',
+                    <div style={{ 
+                      fontWeight: '600', 
                       color: analysisResult.konsumsi === 'Dapat dikonsumsi' ? '#10b981' : '#f59e0b'
                     }}>
                       {analysisResult.konsumsi}
                     </div>
                   </div>
-
+                  
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -970,7 +983,7 @@ function ScanUpload() {
                       <i className="fas fa-sticky-note" style={{ color: '#2563eb', width: '16px' }}></i>
                       Note
                     </div>
-                    <button
+                    <button 
                       onClick={toggleDetail}
                       style={{
                         background: 'none',
@@ -988,10 +1001,10 @@ function ScanUpload() {
                   </div>
                 </div>
               </div>
-
+              
               <div style={{ padding: '1.5rem 2rem', background: '#f9fafb', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
-                <button
-                  onClick={saveToDatabase}
+                <button 
+                  onClick={saveToDatabase} 
                   disabled={isSaving}
                   style={{
                     display: 'inline-flex',
@@ -1050,7 +1063,7 @@ function ScanUpload() {
       )}
 
       {showDetail && (
-        <div
+        <div 
           onClick={toggleDetail}
           style={{
             position: 'fixed',
@@ -1067,7 +1080,7 @@ function ScanUpload() {
             padding: '1rem'
           }}
         >
-          <div
+          <div 
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'rgba(255, 255, 255, 0.95)',
@@ -1125,7 +1138,7 @@ function ScanUpload() {
                 <i className="fas fa-times" style={{ position: 'relative', zIndex: 1 }}></i>
               </button>
             </div>
-
+            
             <div style={{
               display: 'flex',
               padding: '0.5rem',
@@ -1135,7 +1148,7 @@ function ScanUpload() {
               borderRadius: '16px',
               position: 'relative'
             }}>
-              <button
+              <button 
                 onClick={() => setActiveTab('makanan')}
                 style={{
                   flex: 1,
@@ -1155,7 +1168,7 @@ function ScanUpload() {
               >
                 Makanan
               </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('budidaya')}
                 style={{
                   flex: 1,
@@ -1176,7 +1189,7 @@ function ScanUpload() {
                 Budidaya
               </button>
             </div>
-
+            
             <div style={{
               padding: '1.5rem 2.5rem 2.5rem',
               maxHeight: '50vh',
@@ -1204,9 +1217,9 @@ function ScanUpload() {
                       </p>
                       <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0', display: 'grid', gap: '1rem' }}>
                         {recipes.map((recipe, index) => (
-                          <li
+                          <li 
                             key={recipe.id}
-                            onClick={() => toggleExpand(index)}
+                            onClick={() => toggleExpand(index)} 
                             style={{
                               padding: '1.25rem',
                               paddingLeft: '3rem',
@@ -1238,9 +1251,9 @@ function ScanUpload() {
                                 borderTop: '2px solid rgba(37, 99, 235, 0.1)'
                               }}>
                                 {recipe.image_url && (
-                                  <img
-                                    src={recipe.image_url}
-                                    alt={recipe.title}
+                                  <img 
+                                    src={recipe.image_url} 
+                                    alt={recipe.title} 
                                     style={{
                                       width: '100%',
                                       borderRadius: '12px',
@@ -1309,17 +1322,187 @@ function ScanUpload() {
                   )}
                 </div>
               )}
-
+              
               {activeTab === 'budidaya' && (
                 <div style={{ color: '#374151', lineHeight: 1.8 }}>
-                  <p style={{ margin: '0 0 1.5rem 0', fontSize: '1rem', fontWeight: '500', color: '#4b5563' }}>
-                    Tips budidaya ikan {analysisResult?.name || 'ini'}:
-                  </p>
+                  {/* Chatbot Section */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(16, 185, 129, 0.05))',
+                    borderRadius: '16px',
+                    padding: '1.5rem',
+                    marginBottom: '1.5rem',
+                    border: '1px solid rgba(37, 99, 235, 0.1)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #2563eb, #10b981)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '1.125rem'
+                      }}>
+                        🤖
+                      </div>
+                      <h3 style={{
+                        margin: 0,
+                        fontSize: '1.125rem',
+                        fontWeight: '700',
+                        color: '#1f2937'
+                      }}>
+                        Tanya Chatbot AI
+                      </h3>
+                    </div>
+                    
+                    {/* Chat Messages */}
+                    <div 
+                      ref={chatContainerRef}
+                      style={{
+                        maxHeight: '300px',
+                        overflowY: 'auto',
+                        marginBottom: '1rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      {chatMessages.map((msg, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                          }}
+                        >
+                          <div style={{
+                            maxWidth: '80%',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '12px',
+                            background: msg.role === 'user' 
+                              ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' 
+                              : '#ffffff',
+                            color: msg.role === 'user' ? 'white' : '#1f2937',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                            fontSize: '0.875rem',
+                            lineHeight: 1.6,
+                            border: msg.role === 'assistant' ? '1px solid #e5e7eb' : 'none'
+                          }}>
+                            {msg.content}
+                          </div>
+                        </div>
+                      ))}
+                      {isSendingChat && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                          <div style={{
+                            padding: '0.75rem 1rem',
+                            borderRadius: '12px',
+                            background: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              gap: '0.25rem',
+                              alignItems: 'center'
+                            }}>
+                              <div style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#2563eb',
+                                animation: 'bounce 1.4s infinite ease-in-out both',
+                                animationDelay: '-0.32s'
+                              }}></div>
+                              <div style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#2563eb',
+                                animation: 'bounce 1.4s infinite ease-in-out both',
+                                animationDelay: '-0.16s'
+                              }}></div>
+                              <div style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#2563eb',
+                                animation: 'bounce 1.4s infinite ease-in-out both'
+                              }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Chat Input */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.5rem'
+                    }}>
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !isSendingChat) {
+                            sendChatMessage();
+                          }
+                        }}
+                        placeholder={`Tanya tentang budidaya ${analysisResult?.name || 'ikan'}...`}
+                        disabled={isSendingChat}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem 1rem',
+                          borderRadius: '12px',
+                          border: '1px solid #d1d5db',
+                          fontSize: '0.875rem',
+                          outline: 'none',
+                          background: 'white'
+                        }}
+                      />
+                      <button
+                        onClick={sendChatMessage}
+                        disabled={isSendingChat || !chatInput.trim()}
+                        style={{
+                          padding: '0.75rem 1.25rem',
+                          borderRadius: '12px',
+                          border: 'none',
+                          background: isSendingChat || !chatInput.trim() 
+                            ? '#9ca3af' 
+                            : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                          color: 'white',
+                          cursor: isSendingChat || !chatInput.trim() ? 'not-allowed' : 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        {isSendingChat ? (
+                          <i className="fas fa-spinner fa-spin"></i>
+                        ) : (
+                          <i className="fas fa-paper-plane"></i>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tips Budidaya */}
+      
                   <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0', display: 'grid', gap: '1rem' }}>
                     {budidayaItems.map((item, index) => (
-                      <li
+                      <li 
                         key={index}
-                        onClick={() => toggleExpand(index)}
+                        onClick={() => toggleExpand(index)} 
                         style={{
                           padding: '1.25rem',
                           paddingLeft: '3rem',
@@ -1350,9 +1533,9 @@ function ScanUpload() {
                             paddingTop: '1rem',
                             borderTop: '2px solid rgba(37, 99, 235, 0.1)'
                           }}>
-                            <img
-                              src={item.image}
-                              alt={item.name}
+                            <img 
+                              src={item.image} 
+                              alt={item.name} 
                               style={{
                                 width: '100%',
                                 borderRadius: '12px',
@@ -1379,6 +1562,15 @@ function ScanUpload() {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes bounce {
+          0%, 80%, 100% { 
+            transform: scale(0);
+          } 
+          40% { 
+            transform: scale(1.0);
+          }
         }
       `}</style>
     </div>
