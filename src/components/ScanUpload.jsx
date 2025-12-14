@@ -586,26 +586,7 @@ function ScanUpload() {
   };
 
   const budidayaItems = [
-    {
-      name: 'Pastikan kualitas air tetap bersih dengan pH optimal',
-      resep: '1. Ukur pH air secara rutin (ideal 6.5-8.5). 2. Ganti air secara berkala. 3. Gunakan filter untuk menjaga kebersihan. 4. Hindari overfeeding untuk mencegah pencemaran.',
-      image: 'https://mmc.tirto.id/image/2022/06/14/istock-519915660_ratio-16x9.jpg'
-    },
-    {
-      name: 'Berikan pakan berkualitas sesuai jadwal',
-      resep: '1. Beri pakan 2-3 kali sehari. 2. Gunakan pelet dengan protein 20-30%. 3. Sesuaikan jumlah pakan dengan bobot ikan (2-3% berat tubuh). 4. Pantau sisa pakan untuk hindari polusi.',
-      image: 'https://kuripan.lombokbaratkab.go.id/media/crop/2022/09/08/32-20220908-150322-785183.jpeg'
-    },
-    {
-      name: 'Monitor kesehatan ikan secara rutin',
-      resep: '1. Periksa tanda penyakit seperti lesu atau bintik putih. 2. Karantina ikan sakit. 3. Gunakan obat jika diperlukan. 4. Jaga kepadatan ikan di kolam.',
-      image: 'https://gdm.id/wp-content/uploads/2022/03/ternak-ikan-mujair.jpg'
-    },
-    {
-      name: 'Jaga suhu air sesuai kebutuhan spesies',
-      resep: '1. Ideal suhu 25-30°C. 2. Gunakan pemanas jika diperlukan. 3. Hindari perubahan suhu mendadak. 4. Monitor suhu harian.',
-      image: 'https://i1.wp.com/risetcdn.jatimtimes.com/images/2024/04/19/Ikan-Mujair-di-kolam-air-tawar.-Foto-Xjellypastaa-P6f3c3d128f525baf.jpg?quality=50&resize=1200,675'
-    }
+
   ];
 
   const formatInstructions = (instructions) => {
