@@ -586,7 +586,26 @@ function ScanUpload() {
   };
 
   const budidayaItems = [
-
+    {
+      name: 'Pastikan kualitas air tetap bersih dengan pH optimal',
+      resep: '1. Ukur pH air secara rutin (ideal 6.5-8.5). 2. Ganti air secara berkala. 3. Gunakan filter untuk menjaga kebersihan. 4. Hindari overfeeding untuk mencegah pencemaran.',
+      image: 'https://mmc.tirto.id/image/2022/06/14/istock-519915660_ratio-16x9.jpg'
+    },
+    {
+      name: 'Berikan pakan berkualitas sesuai jadwal',
+      resep: '1. Beri pakan 2-3 kali sehari. 2. Gunakan pelet dengan protein 20-30%. 3. Sesuaikan jumlah pakan dengan bobot ikan (2-3% berat tubuh). 4. Pantau sisa pakan untuk hindari polusi.',
+      image: 'https://kuripan.lombokbaratkab.go.id/media/crop/2022/09/08/32-20220908-150322-785183.jpeg'
+    },
+    {
+      name: 'Monitor kesehatan ikan secara rutin',
+      resep: '1. Periksa tanda penyakit seperti lesu atau bintik putih. 2. Karantina ikan sakit. 3. Gunakan obat jika diperlukan. 4. Jaga kepadatan ikan di kolam.',
+      image: 'https://gdm.id/wp-content/uploads/2022/03/ternak-ikan-mujair.jpg'
+    },
+    {
+      name: 'Jaga suhu air sesuai kebutuhan spesies',
+      resep: '1. Ideal suhu 25-30°C. 2. Gunakan pemanas jika diperlukan. 3. Hindari perubahan suhu mendadak. 4. Monitor suhu harian.',
+      image: 'https://i1.wp.com/risetcdn.jatimtimes.com/images/2024/04/19/Ikan-Mujair-di-kolam-air-tawar.-Foto-Xjellypastaa-P6f3c3d128f525baf.jpg?quality=50&resize=1200,675'
+    }
   ];
 
   const formatInstructions = (instructions) => {
@@ -1329,32 +1348,34 @@ function ScanUpload() {
                   <div style={{
                     background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(16, 185, 129, 0.05))',
                     borderRadius: '16px',
-                    padding: '1.5rem',
+                    padding: '1rem',
                     marginBottom: '1.5rem',
                     border: '1px solid rgba(37, 99, 235, 0.1)'
                   }}>
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.75rem',
-                      marginBottom: '1rem'
+                      gap: '0.5rem',
+                      marginBottom: '1rem',
+                      flexWrap: 'wrap'
                     }}>
                       <div style={{
-                        width: '36px',
-                        height: '36px',
+                        width: '32px',
+                        height: '32px',
                         borderRadius: '50%',
                         background: 'linear-gradient(135deg, #2563eb, #10b981)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: 'white',
-                        fontSize: '1.125rem'
+                        fontSize: '1rem',
+                        flexShrink: 0
                       }}>
                         🤖
                       </div>
                       <h3 style={{
                         margin: 0,
-                        fontSize: '1.125rem',
+                        fontSize: 'clamp(0.95rem, 2.5vw, 1.125rem)',
                         fontWeight: '700',
                         color: '#1f2937'
                       }}>
@@ -1366,12 +1387,13 @@ function ScanUpload() {
                     <div 
                       ref={chatContainerRef}
                       style={{
-                        maxHeight: '300px',
+                        maxHeight: 'min(300px, 40vh)',
                         overflowY: 'auto',
                         marginBottom: '1rem',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '0.75rem'
+                        gap: '0.625rem',
+                        padding: '0.25rem'
                       }}
                     >
                       {chatMessages.map((msg, idx) => (
@@ -1383,17 +1405,19 @@ function ScanUpload() {
                           }}
                         >
                           <div style={{
-                            maxWidth: '80%',
-                            padding: '0.75rem 1rem',
+                            maxWidth: 'min(85%, 400px)',
+                            padding: 'clamp(0.625rem, 2vw, 0.75rem) clamp(0.75rem, 3vw, 1rem)',
                             borderRadius: '12px',
                             background: msg.role === 'user' 
                               ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' 
                               : '#ffffff',
                             color: msg.role === 'user' ? 'white' : '#1f2937',
                             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            fontSize: '0.875rem',
+                            fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)',
                             lineHeight: 1.6,
-                            border: msg.role === 'assistant' ? '1px solid #e5e7eb' : 'none'
+                            border: msg.role === 'assistant' ? '1px solid #e5e7eb' : 'none',
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word'
                           }}>
                             {msg.content}
                           </div>
@@ -1402,7 +1426,7 @@ function ScanUpload() {
                       {isSendingChat && (
                         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                           <div style={{
-                            padding: '0.75rem 1rem',
+                            padding: '0.625rem 0.875rem',
                             borderRadius: '12px',
                             background: '#ffffff',
                             border: '1px solid #e5e7eb',
@@ -1414,24 +1438,24 @@ function ScanUpload() {
                               alignItems: 'center'
                             }}>
                               <div style={{
-                                width: '8px',
-                                height: '8px',
+                                width: '7px',
+                                height: '7px',
                                 borderRadius: '50%',
                                 background: '#2563eb',
                                 animation: 'bounce 1.4s infinite ease-in-out both',
                                 animationDelay: '-0.32s'
                               }}></div>
                               <div style={{
-                                width: '8px',
-                                height: '8px',
+                                width: '7px',
+                                height: '7px',
                                 borderRadius: '50%',
                                 background: '#2563eb',
                                 animation: 'bounce 1.4s infinite ease-in-out both',
                                 animationDelay: '-0.16s'
                               }}></div>
                               <div style={{
-                                width: '8px',
-                                height: '8px',
+                                width: '7px',
+                                height: '7px',
                                 borderRadius: '50%',
                                 background: '#2563eb',
                                 animation: 'bounce 1.4s infinite ease-in-out both'
@@ -1445,7 +1469,8 @@ function ScanUpload() {
                     {/* Chat Input */}
                     <div style={{
                       display: 'flex',
-                      gap: '0.5rem'
+                      gap: '0.5rem',
+                      alignItems: 'stretch'
                     }}>
                       <input
                         type="text"
@@ -1456,23 +1481,24 @@ function ScanUpload() {
                             sendChatMessage();
                           }
                         }}
-                        placeholder={`Tanya tentang budidaya ${analysisResult?.name || 'ikan'}...`}
+                        placeholder={`Tanya tentang ${analysisResult?.name || 'ikan'}...`}
                         disabled={isSendingChat}
                         style={{
                           flex: 1,
-                          padding: '0.75rem 1rem',
+                          padding: 'clamp(0.625rem, 2vw, 0.75rem) clamp(0.75rem, 3vw, 1rem)',
                           borderRadius: '12px',
                           border: '1px solid #d1d5db',
-                          fontSize: '0.875rem',
+                          fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)',
                           outline: 'none',
-                          background: 'white'
+                          background: 'white',
+                          minWidth: 0
                         }}
                       />
                       <button
                         onClick={sendChatMessage}
                         disabled={isSendingChat || !chatInput.trim()}
                         style={{
-                          padding: '0.75rem 1.25rem',
+                          padding: 'clamp(0.625rem, 2vw, 0.75rem) clamp(0.875rem, 3vw, 1.25rem)',
                           borderRadius: '12px',
                           border: 'none',
                           background: isSendingChat || !chatInput.trim() 
@@ -1480,11 +1506,14 @@ function ScanUpload() {
                             : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                           color: 'white',
                           cursor: isSendingChat || !chatInput.trim() ? 'not-allowed' : 'pointer',
-                          fontSize: '0.875rem',
+                          fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)',
                           fontWeight: '600',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.5rem'
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          minWidth: '44px',
+                          flexShrink: 0
                         }}
                       >
                         {isSendingChat ? (
@@ -1497,7 +1526,9 @@ function ScanUpload() {
                   </div>
 
                   {/* Tips Budidaya */}
-      
+                  <p style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '500', color: '#4b5563' }}>
+                    Tips budidaya ikan {analysisResult?.name || 'ini'}:
+                  </p>
                   <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0', display: 'grid', gap: '1rem' }}>
                     {budidayaItems.map((item, index) => (
                       <li 
