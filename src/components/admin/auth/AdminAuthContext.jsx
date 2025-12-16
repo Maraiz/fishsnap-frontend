@@ -18,28 +18,24 @@ export const AdminAuthProvider = ({ children }) => {
   const [accessToken, setAccessToken] = useState(null); // Store in memory only
 
   // Token refresh timer
-  const [refreshTimer, setRefreshTimer] = useState(null);
+  const refreshTimerRef = useRef(null);
 
   // Setup automatic token refresh
-  const setupTokenRefresh = useCallback(() => {
-    if (refreshTimer) {
-      clearInterval(refreshTimer);
+  const setupTokenRefresh = () => {
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
     }
 
-    // Refresh token every 14 minutes (access token expires in 15 minutes)
-    const timer = setInterval(async () => {
+    refreshTimerRef.current = setInterval(async () => {
       try {
         console.log('🔄 Auto-refreshing token...');
         await refreshAccessToken();
       } catch (error) {
-        console.error('❌ Auto-refresh failed:', error);
-        // If refresh fails, logout user
         logout();
       }
-    }, 14 * 60 * 1000); // 14 minutes
+    }, 14 * 60 * 1000);
+  };
 
-    setRefreshTimer(timer);
-  }, [refreshTimer]);
 
   // Refresh access token using httpOnly refresh token cookie
   const refreshAccessToken = async () => {
@@ -54,15 +50,15 @@ export const AdminAuthProvider = ({ children }) => {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Update access token in memory only
         setAccessToken(result.accessToken);
-        
+
         // If admin info is not available, fetch it
         if (!adminInfo && result.admin) {
           setAdminInfo(result.admin);
         }
-        
+
         setIsAuthenticated(true);
         console.log('✅ Token refreshed successfully');
         return result.accessToken;
@@ -95,14 +91,15 @@ export const AdminAuthProvider = ({ children }) => {
   // Check authentication status on mount
   useEffect(() => {
     checkAuthStatus();
-    
-    // Cleanup timer on unmount
+
     return () => {
-      if (refreshTimer) {
-        clearInterval(refreshTimer);
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // Handle page visibility change (auto-refresh when page becomes visible)
   useEffect(() => {
@@ -117,25 +114,12 @@ export const AdminAuthProvider = ({ children }) => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isAuthenticated]);
 
-  // Handle beforeunload (clear any sensitive data when page unloads)
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Clear access token from memory when page unloads
-      setAccessToken(null);
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
 
   const checkAuthStatus = async () => {
     try {
@@ -149,32 +133,34 @@ export const AdminAuthProvider = ({ children }) => {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Set access token in memory
         setAccessToken(result.accessToken);
-        
+
         // Set admin info
         if (result.admin) {
           setAdminInfo(result.admin);
         }
-        
+
         setIsAuthenticated(true);
-        
+
         // Setup automatic token refresh
         setupTokenRefresh();
-        
+
         console.log('✅ Authentication verified');
       } else {
         // No valid refresh token, user needs to login
         setIsAuthenticated(false);
         setAdminInfo(null);
         // setAccessToken(null);
+        setAccessToken(null);
         console.log('❌ No valid refresh token found');
       }
     } catch (error) {
       console.error('Auth check error:', error);
       setIsAuthenticated(false);
       setAdminInfo(null);
+      // setAccessToken(null);
       setAccessToken(null);
     } finally {
       setIsLoading(false);
@@ -186,10 +172,10 @@ export const AdminAuthProvider = ({ children }) => {
     setAccessToken(token);
     setAdminInfo(adminData);
     setIsAuthenticated(true);
-    
+
     // Setup automatic token refresh
     setupTokenRefresh();
-    
+
     // Don't store anything in localStorage
     console.log('✅ Admin logged in:', adminData.name);
   };
@@ -197,17 +183,18 @@ export const AdminAuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Clear refresh timer
-      if (refreshTimer) {
-        clearInterval(refreshTimer);
-        setRefreshTimer(null);
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+        refreshTimerRef.current = null;
       }
 
+
       // Call logout API to clear httpOnly refresh token cookie
-      await apiCall(API_ENDPOINTS.ADMIN_LOGOUT, { 
+      await apiCall(API_ENDPOINTS.ADMIN_LOGOUT, {
         method: 'DELETE',
         credentials: 'include'
       });
-      
+
       console.log('✅ Logout API called successfully');
     } catch (error) {
       console.error('❌ Logout API error:', error);
@@ -216,12 +203,12 @@ export const AdminAuthProvider = ({ children }) => {
       setAccessToken(null);
       setAdminInfo(null);
       setIsAuthenticated(false);
-      
+
       // Clear any localStorage items that might exist (cleanup)
       localStorage.removeItem('adminAccessToken');
       localStorage.removeItem('adminInfo');
       localStorage.removeItem('adminToken');
-      
+
       console.log('✅ Admin logged out and state cleared');
     }
   };
