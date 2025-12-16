@@ -168,7 +168,7 @@ export const AdminAuthProvider = ({ children }) => {
         // No valid refresh token, user needs to login
         setIsAuthenticated(false);
         setAdminInfo(null);
-        setAccessToken(null);
+        // setAccessToken(null);
         console.log('❌ No valid refresh token found');
       }
     } catch (error) {
