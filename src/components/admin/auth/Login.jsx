@@ -15,6 +15,7 @@ function AdminLogin() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
@@ -202,7 +203,7 @@ function AdminLogin() {
         transform: 'translateY(0)',
         transition: 'transform 0.3s ease'
       }}>
-
+        
         <div className="logo-section" style={{
           textAlign: 'center',
           marginBottom: '40px'
