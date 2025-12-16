@@ -18,7 +18,7 @@ const getApiUrl = () => {
   }
   
   // Production fallback (sesuaikan dengan domain production)
-  return 'https://your-api-domain.com';
+  return 'https://api-fitcalori.my.id';
 };
 
 export const API_BASE_URL = getApiUrl();
